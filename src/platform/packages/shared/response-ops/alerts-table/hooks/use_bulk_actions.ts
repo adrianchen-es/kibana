@@ -29,10 +29,13 @@ import {
   ADD_TO_NEW_CASE,
   ALERTS_ALREADY_ATTACHED_TO_CASE,
   MARK_AS_UNTRACKED,
+  MARK_AS_ACKNOWLEDGED,
   NO_ALERTS_ADDED_TO_CASE,
 } from '../translations';
 import { useBulkUntrackAlerts } from './use_bulk_untrack_alerts';
 import { useBulkUntrackAlertsByQuery } from './use_bulk_untrack_alerts_by_query';
+import { useBulkAcknowledgeAlerts } from './use_bulk_acknowledge_alerts';
+import { useBulkAcknowledgeAlertsByQuery } from './use_bulk_acknowledge_alerts_by_query';
 
 interface BulkActionsProps {
   ruleTypeIds?: string[];
@@ -64,6 +67,14 @@ type UseBulkAddToCaseActionsProps = Pick<
   Pick<UseBulkActions, 'clearSelection'>;
 
 type UseBulkUntrackActionsProps = Pick<
+  BulkActionsProps,
+  'refresh' | 'query' | 'ruleTypeIds' | 'application' | 'http' | 'notifications'
+> &
+  Pick<UseBulkActions, 'clearSelection' | 'setIsBulkActionsLoading'> & {
+    isAllSelected: boolean;
+  };
+
+type UseBulkAcknowledgeActionsProps = Pick<
   BulkActionsProps,
   'refresh' | 'query' | 'ruleTypeIds' | 'application' | 'http' | 'notifications'
 > &
@@ -215,6 +226,12 @@ export const useBulkUntrackActions = ({
     notifications,
   });
 
+  const { mutateAsync: acknowledgeAlerts } = useBulkUntrackAlerts({ http, notifications });
+  const { mutateAsync: acknowledgeAlertsByQuery } = useBulkUntrackAlertsByQuery({
+    http,
+    notifications,
+  });
+
   const hasApmPermission = application?.capabilities.apm?.['alerting:show'];
   const hasInfrastructurePermission = application?.capabilities.infrastructure?.show;
   const hasLogsPermission = application?.capabilities.logs?.show;
@@ -230,8 +247,10 @@ export const useBulkUntrackActions = ({
         setIsBulkActionsLoading(true);
         if (isAllSelected) {
           await untrackAlertsByQuery({ query, ruleTypeIds });
+          await acknowledgeAlertsByQuery({ query, ruleTypeIds });
         } else {
           await untrackAlerts({ indices, alertUuids });
+          await acknowledgeAlerts({ indices, alertUuids });
         }
         onSuccess();
       } finally {
@@ -246,6 +265,8 @@ export const useBulkUntrackActions = ({
       setIsBulkActionsLoading,
       untrackAlerts,
       untrackAlertsByQuery,
+      acknowledgeAlerts,
+      acknowledgeAlertsByQuery,
     ]
   );
 
@@ -268,6 +289,121 @@ export const useBulkUntrackActions = ({
         disableOnQuery: false,
         disabledLabel: MARK_AS_UNTRACKED,
         'data-test-subj': 'mark-as-untracked',
+        onClick,
+      },
+      {
+        label: MARK_AS_ACKNOWLEDGED,
+        key: 'mark-as-acknowledged',
+        disableOnQuery: false,
+        disabledLabel: MARK_AS_ACKNOWLEDGED,
+        'data-test-subj': 'mark-as-acknowledged',
+        onClick,
+      },
+    ];
+  }, [
+    application?.capabilities,
+    hasApmPermission,
+    hasInfrastructurePermission,
+    hasLogsPermission,
+    hasUptimePermission,
+    hasSloPermission,
+    hasObservabilityPermission,
+    onClick,
+  ]);
+};
+
+export const useBulkAcknowledgeActions = ({
+  setIsBulkActionsLoading,
+  refresh,
+  clearSelection,
+  query,
+  ruleTypeIds = [],
+  isAllSelected,
+  http,
+  notifications,
+  application,
+}: UseBulkAcknowledgeActionsProps) => {
+  const onSuccess = useCallback(() => {
+    refresh();
+    clearSelection();
+  }, [clearSelection, refresh]);
+  const { mutateAsync: untrackAlerts } = useBulkAcknowledgeAlerts({ http, notifications });
+  const { mutateAsync: untrackAlertsByQuery } = useBulkAcknowledgeAlertsByQuery({
+    http,
+    notifications,
+  });
+
+  const { mutateAsync: acknowledgeAlerts } = useBulkAcknowledgeAlerts({ http, notifications });
+  const { mutateAsync: acknowledgeAlertsByQuery } = useBulkAcknowledgeAlertsByQuery({
+    http,
+    notifications,
+  });
+
+  const hasApmPermission = application?.capabilities.apm?.['alerting:show'];
+  const hasInfrastructurePermission = application?.capabilities.infrastructure?.show;
+  const hasLogsPermission = application?.capabilities.logs?.show;
+  const hasUptimePermission = application?.capabilities.uptime?.show;
+  const hasSloPermission = application?.capabilities.slo?.show;
+  const hasObservabilityPermission = application?.capabilities.observability?.show;
+  const onClick = useCallback(
+    async (alerts?: TimelineItem[]) => {
+      if (!alerts) return;
+      const alertUuids = alerts.map((alert) => alert._id);
+      const indices = alerts.map((alert) => alert._index ?? '');
+      try {
+        setIsBulkActionsLoading(true);
+        if (isAllSelected) {
+          await untrackAlertsByQuery({ query, ruleTypeIds });
+          await acknowledgeAlertsByQuery({ query, ruleTypeIds });
+        } else {
+          await untrackAlerts({ indices, alertUuids });
+          await acknowledgeAlerts({ indices, alertUuids });
+        }
+        onSuccess();
+      } finally {
+        setIsBulkActionsLoading(false);
+      }
+    },
+    [
+      query,
+      ruleTypeIds,
+      isAllSelected,
+      onSuccess,
+      setIsBulkActionsLoading,
+      untrackAlerts,
+      untrackAlertsByQuery,
+      acknowledgeAlerts,
+      acknowledgeAlertsByQuery,
+    ]
+  );
+
+  return useMemo(() => {
+    // Check if at least one Observability feature is enabled
+    if (!application?.capabilities) return [];
+    if (
+      !hasApmPermission &&
+      !hasInfrastructurePermission &&
+      !hasLogsPermission &&
+      !hasUptimePermission &&
+      !hasSloPermission &&
+      !hasObservabilityPermission
+    )
+      return [];
+    return [
+      {
+        label: MARK_AS_UNTRACKED,
+        key: 'mark-as-untracked',
+        disableOnQuery: false,
+        disabledLabel: MARK_AS_UNTRACKED,
+        'data-test-subj': 'mark-as-untracked',
+        onClick,
+      },
+      {
+        label: MARK_AS_ACKNOWLEDGED,
+        key: 'mark-as-acknowledged',
+        disableOnQuery: false,
+        disabledLabel: MARK_AS_ACKNOWLEDGED,
+        'data-test-subj': 'mark-as-acknowledged',
         onClick,
       },
     ];
@@ -320,6 +456,17 @@ export function useBulkActions({
     notifications,
   });
   const untrackBulkActions = useBulkUntrackActions({
+    application,
+    setIsBulkActionsLoading,
+    refresh,
+    clearSelection,
+    query,
+    ruleTypeIds,
+    isAllSelected: bulkActionsState.isAllSelected,
+    http,
+    notifications,
+  });
+  const untrackBulkActions = useBulkAcknowledgeActions({
     application,
     setIsBulkActionsLoading,
     refresh,
