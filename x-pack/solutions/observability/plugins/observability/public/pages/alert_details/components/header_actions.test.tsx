@@ -13,7 +13,7 @@ import { casesPluginMock } from '@kbn/cases-plugin/public/mocks';
 import { render } from '../../../utils/test_helper';
 import { useKibana } from '../../../utils/kibana_react';
 import { kibanaStartMock } from '../../../utils/kibana_react.mock';
-import { alertWithGroupsAndTags, mockAlertUuid, untrackedAlert } from '../mock/alert';
+import { alertWithGroupsAndTags, mockAlertUuid, untrackedAlert, acknowledgedAlert } from '../mock/alert';
 import { useFetchRule } from '../../../hooks/use_fetch_rule';
 
 import { HeaderActions } from './header_actions';
@@ -218,6 +218,25 @@ describe('Header Actions', () => {
         expect(queryByTestId('untrack-alert-button')).not.toHaveAttribute('disabled');
       });
 
+      it('should offer a "Mark as acknowledged" button which is enabled', async () => {
+        const { queryByTestId, findByTestId } = render(
+          <HeaderActions
+            alert={alertWithGroupsAndTags}
+            alertStatus={alertWithGroupsAndTags.fields[ALERT_STATUS] as AlertStatus}
+            onUntrackAlert={mockOnUntrackAlert}
+            refetch={jest.fn()}
+            // @ts-expect-error partial implementation for testing
+            rule={{
+              id: mockRuleId,
+              name: mockRuleName,
+            }}
+          />
+        );
+
+        fireEvent.click(await findByTestId('alert-details-header-actions-menu-button'));
+        expect(queryByTestId('untrack-alert-button')).not.toHaveAttribute('disabled');
+      });
+
       it('should offer a "Go to rule details" button which opens the rule details page in a new tab', async () => {
         const { queryByTestId, findByTestId } = render(
           <HeaderActions
@@ -268,6 +287,20 @@ describe('Header Actions', () => {
         <HeaderActions
           alert={untrackedAlert}
           alertStatus={untrackedAlert.fields[ALERT_STATUS] as AlertStatus}
+          onUntrackAlert={mockOnUntrackAlert}
+          refetch={jest.fn()}
+        />
+      );
+
+      fireEvent.click(await findByTestId('alert-details-header-actions-menu-button'));
+      expect(queryByTestId('untrack-alert-button')).toHaveAttribute('disabled');
+    });
+
+    it('should disable the "Mark as acknowledged" button when alert status is acknowledged', async () => {
+      const { queryByTestId, findByTestId } = render(
+        <HeaderActions
+          alert={acknowledgedAlert}
+          alertStatus={acknowledgedAlert.fields[ALERT_STATUS] as AlertStatus}
           onUntrackAlert={mockOnUntrackAlert}
           refetch={jest.fn()}
         />

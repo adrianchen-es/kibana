@@ -274,6 +274,13 @@ export const MARK_AS_UNTRACKED = i18n.translate(
   }
 );
 
+export const MARK_AS_ACKNOWLEDGED = i18n.translate(
+  'xpack.triggersActionsUI.alerts.table.actions.markAsAcknowledged',
+  {
+    defaultMessage: 'Mark as acknowledged',
+  }
+);
+
 export const MUTE = i18n.translate('xpack.triggersActionsUI.alerts.table.actions.mute', {
   defaultMessage: 'Mute',
 });

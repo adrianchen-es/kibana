@@ -30,7 +30,8 @@ import {
 import { useKibana } from '../../../utils/kibana_react';
 import type { TopAlert } from '../../../typings/alerts';
 import { paths } from '../../../../common/locators/paths';
-import { useBulkUntrackAlerts } from '../hooks/use_bulk_untrack_alerts';
+import { useBulkUntrackAlerts, useBulkAcknowledgeAlerts } from '../hooks/use_bulk_untrack_alerts';
+import { useBulkAcknowledgeAlerts } from '../hooks/use_bulk_acknowledge_alerts';
 import {
   AlertDetailsRuleFormFlyout,
   type AlertDetailsRuleFormFlyoutBaseProps,
@@ -41,6 +42,7 @@ export interface HeaderActionsProps extends AlertDetailsRuleFormFlyoutBaseProps 
   alertIndex?: string;
   alertStatus?: AlertStatus;
   onUntrackAlert: () => void;
+  onAcknowledgeAlert: () => void;
 }
 
 export function HeaderActions({
@@ -48,6 +50,7 @@ export function HeaderActions({
   alertIndex,
   alertStatus,
   onUntrackAlert,
+  onAcknowledgeAlert,
   onUpdate,
   rule,
   refetch,
@@ -66,6 +69,8 @@ export function HeaderActions({
 
   const { mutateAsync: untrackAlerts } = useBulkUntrackAlerts();
 
+  const { mutateAsync: acknowledgeAlerts } = useBulkAcknowledgeAlerts();
+
   const handleUntrackAlert = useCallback(async () => {
     if (alert) {
       await untrackAlerts({
@@ -75,6 +80,16 @@ export function HeaderActions({
       onUntrackAlert();
     }
   }, [alert, untrackAlerts, onUntrackAlert]);
+
+  const handleAcknowledgeAlert = useCallback(async () => {
+    if (alert) {
+      await acknowledgeAlerts({
+        indices: ['.internal.alerts-observability.*'],
+        alertUuids: [alert.fields[ALERT_UUID]],
+      });
+      onAcknowledgeAlert();
+    }
+  }, [alert, acknowledgeAlerts, onAcknowledgeAlert]);
 
   const [alertDetailsRuleFormFlyoutOpen, setAlertDetailsRuleFormFlyoutOpen] = useState(false);
 
@@ -191,6 +206,21 @@ export function HeaderActions({
                   <EuiText size="s">
                     {i18n.translate('xpack.observability.alertDetails.untrackAlert', {
                       defaultMessage: 'Mark as untracked',
+                    })}
+                  </EuiText>
+                </EuiButtonEmpty>
+
+                <EuiButtonEmpty
+                  size="s"
+                  color="text"
+                  iconType="eyeClosed"
+                  onClick={handleAcknowledgeAlert}
+                  data-test-subj="acknowledge-alert-button"
+                  disabled={alertStatus !== ALERT_STATUS_ACTIVE}
+                >
+                  <EuiText size="s">
+                    {i18n.translate('xpack.observability.alertDetails.acknowledgeAlert', {
+                      defaultMessage: 'Mark as acknowledged',
                     })}
                   </EuiText>
                 </EuiButtonEmpty>

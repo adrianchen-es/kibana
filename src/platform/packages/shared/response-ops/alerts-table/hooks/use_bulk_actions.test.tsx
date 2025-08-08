@@ -13,7 +13,7 @@ import { httpServiceMock } from '@kbn/core-http-browser-mocks';
 import { notificationServiceMock } from '@kbn/core-notifications-browser-mocks';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AlertsQueryContext } from '@kbn/alerts-ui-shared/src/common/contexts/alerts_query_context';
-import { useBulkActions, useBulkAddToCaseActions, useBulkUntrackActions } from './use_bulk_actions';
+import { useBulkActions, useBulkAddToCaseActions, useBulkUntrackActions, useBulkAcknowledgeActions } from './use_bulk_actions';
 import { createCasesServiceMock } from '../mocks/cases.mock';
 import { BulkActionsVerbs, type PublicAlertsDataGridProps } from '../types';
 import { AdditionalContext, RenderContext } from '../types';
@@ -458,6 +458,44 @@ describe('bulk action hooks', () => {
     });
   });
 
+  describe('useBulkAcknowledgeActions', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+    it('should not show the bulk actions when the user lacks any observability permissions', () => {
+      const { result } = renderHook(
+        () =>
+          useBulkAcknowledgeActions({
+            setIsBulkActionsLoading,
+            refresh,
+            clearSelection,
+            isAllSelected: true,
+            query: {
+              bool: {
+                must: {
+                  term: {
+                    test: 'test',
+                  },
+                },
+              },
+            },
+            http,
+            notifications,
+            application: {
+              ...application,
+              // Force no permissions
+              capabilities: {} as unknown as typeof application.capabilities,
+            },
+          }),
+        {
+          wrapper,
+        }
+      );
+
+      expect(result.current.length).toBe(0);
+    });
+  });
+
   describe('useBulkActions', () => {
     beforeEach(() => {
       jest.clearAllMocks();
@@ -511,6 +549,14 @@ describe('bulk action hooks', () => {
                 "disabledLabel": "Mark as untracked",
                 "key": "mark-as-untracked",
                 "label": "Mark as untracked",
+                "onClick": [Function],
+              },
+              Object {
+                "data-test-subj": "mark-as-acknowledged",
+                "disableOnQuery": false,
+                "disabledLabel": "Mark as acknowledged",
+                "key": "mark-as-acknowledged",
+                "label": "Mark as acknowledged",
                 "onClick": [Function],
               },
             ],
