@@ -12,7 +12,7 @@ import { i18n } from '@kbn/i18n';
 import { EuiContextMenuItem } from '@elastic/eui';
 import { ALERT_STATUS, ALERT_STATUS_ACTIVE } from '@kbn/rule-data-utils';
 import type { AdditionalContext, AlertActionsProps } from '../types';
-import { useBulkAcknowledgeAlerts } from '../hooks/use_bulk_untrack_alerts';
+import { useBulkAcknowledgeAlerts } from '../hooks/use_bulk_acknowledge_alerts';
 import { typedMemo } from '../utils/react';
 import { useAlertsTableContext } from '../contexts/alerts_table_context';
 
@@ -28,17 +28,17 @@ export const MarkAsAcknowledgedAlertAction = typedMemo(
     const {
       services: { http, notifications },
     } = useAlertsTableContext();
-    const { mutateAsync: untrackAlerts } = useBulkAcknowledgeAlerts({ http, notifications });
+    const { mutateAsync: acknowledgeAlerts } = useBulkAcknowledgeAlerts({ http, notifications });
     const isAlertActive = useMemo(() => alert[ALERT_STATUS]?.[0] === ALERT_STATUS_ACTIVE, [alert]);
 
     const handleAcknowledgeAlert = useCallback(async () => {
-      await untrackAlerts({
+      await acknowledgeAlerts({
         indices: [alert._index ?? ''],
         alertUuids: [alert._id],
       });
       onActionExecuted?.();
       refresh();
-    }, [untrackAlerts, alert._index, alert._id, onActionExecuted, refresh]);
+    }, [acknowledgeAlerts, alert._index, alert._id, onActionExecuted, refresh]);
 
     if (!isAlertActive) {
       return null;
@@ -46,12 +46,12 @@ export const MarkAsAcknowledgedAlertAction = typedMemo(
 
     return (
       <EuiContextMenuItem
-        data-test-subj="untrackAlert"
-        key="untrackAlert"
+        data-test-subj="acknowledgeAlert"
+        key="acknowledgeAlert"
         size="s"
         onClick={handleAcknowledgeAlert}
       >
-        {i18n.translate('xpack.triggersActionsUI.alertsTable.actions.untrack', {
+        {i18n.translate('xpack.triggersActionsUI.alertsTable.actions.acknowledge', {
           defaultMessage: 'Mark as acknowledged',
         })}
       </EuiContextMenuItem>
